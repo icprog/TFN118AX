@@ -29,13 +29,13 @@
 #include "Debug_log.h"
 
 uint8_t volatile package[32];  ///< Received packet buffer
-uint32_t DayCounter = DAY_TIME;								//ÌìÃëÊı
+uint32_t DayCounter = DAY_TIME;								//å¤©ç§’æ•°
 uint8_t DayOverFlag = 1;
-run_level_t run_level = LEVEL_IDLE;							//ÔËĞĞ¼¶±ğ
-extern pah8011Data_t pah8011Data;
+run_level_t run_level = LEVEL_IDLE;							//è¿è¡Œçº§åˆ«
 
-extern uint8_t LowVolReportNum;									//µÍÑ¹ÉÏ±¨´ÎÊı
-extern uint8_t LowVol;														//µÍÑ¹
+
+extern uint8_t LowVolReportNum;									//ä½å‹ä¸ŠæŠ¥æ¬¡æ•°
+extern uint8_t LowVol;														//ä½å‹
 extern uint8_t led_flag;
 extern uint8_t CycleSendFlag;
 extern uint8_t SampleOverFlag;
@@ -51,10 +51,12 @@ void Sensor_Value(void);
 void CloseHeartSample(void);
 
 extern uint8_t time_int_flag;
+extern chr_typedef battery;//å……ç”µæŒ‡ç¤º
+extern pah8011_state_t pah8011State;
 /*******************************************************
-º¯ÊıÃû:¸ßÆµ¾§Õñ³õÊ¼»¯
-²Î  Êı:ÎŞ
-·µ  »Ø:ÎŞ
+å‡½æ•°å:é«˜é¢‘æ™¶æŒ¯åˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›:æ— 
 *******************************************************/
 void Osc_HFCLK(void)
 {
@@ -77,26 +79,26 @@ void Osc_HFCLK(void)
 extern uint8_t pah_start;
 void Osc_HFCLK_Off(void)
 {
-	//µ±ĞÄÂÊ²É¼¯Ê±²»¹Ø±ÕÍâ²¿Ê±ÖÓ¡£
+	//å½“å¿ƒç‡é‡‡é›†æ—¶ä¸å…³é—­å¤–éƒ¨æ—¶é’Ÿï¼Œä½¿ç”¨å¤–éƒ¨æ™¶æŒ¯ï¼ŒåŠŸè€—æ›´ä½ã€‚
 	if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_SRC_Xtal)==1 && 0 == pah_start )
 	{
 		NRF_CLOCK->TASKS_HFCLKSTOP = 1;
 	}
 }
 /*******************************************************
-º¯ÊıÃû£º¶Ë¿Ú³õÊ¼»¯
-²Î  Êı:ÎŞ
-·µ  »Ø:ÎŞ
+å‡½æ•°åï¼šç«¯å£åˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›:æ— 
 *******************************************************/
 void port_Init(void)
 {
 
 }
 /*******************************************************
-º¯ÊıÃû£º¶Ë¿Ú³õÊ¼»¯
-²Î  Êı:ÎŞ
-·µ  »Ø:ÎŞ
-¹¦	ÄÜ£º1sµ÷ÓÃÒ»´Î
+å‡½æ•°åï¼šç«¯å£åˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›:æ— 
+åŠŸ	èƒ½ï¼š1sè°ƒç”¨ä¸€æ¬¡
 *******************************************************/
 void PowerCheck(void)
 {
@@ -121,14 +123,14 @@ void PowerCheck(void)
 		
 		if(num > 10)
 		{
-			LowVol = 1;//ÊµÊ±µÍÑ¹×´Ì¬
+			LowVol = 1;//å®æ—¶ä½å‹çŠ¶æ€
 			num = 0;
 		}
 	}
 }
 void EnableWDT(void)
 {
-	NRF_WDT->CRV = 143839;//4Ãë
+	NRF_WDT->CRV = 143839;//4ç§’
 	NRF_WDT->RREN = WDT_RREN_RR0_Enabled << WDT_RREN_RR0_Pos;
 	NRF_WDT->TASKS_START = 1;
 }
@@ -154,6 +156,7 @@ int main(void)
 //	EnableWDT();
 	nrf_gpio_cfg_output(IO_OFF_D);
 	nrf_gpio_pin_set(IO_OFF_D);
+	chr_interrupt_config();//å……ç”µä¸­æ–­åˆå§‹åŒ–
 	pah8011_gpio_init();//PowerRdN
 	while(1)
 	{
@@ -167,17 +170,30 @@ int main(void)
 		PowerCheck();
 		#ifdef __TFN108
 //		OFFaboutRate();
-		if(1 == pah8011Data.close_flag)
+		if(1 == pah8011State.close_flag)
 		{
-			pah8011Data.close_flag = 0;
+			pah8011State.close_flag = 0;
 			CloseHeartSample();
 		}
-		if(SampleOverFlag && CycleSendEn)//»î¶¯Ä£Ê½ÏÂ¼ì²âĞÄÂÊ
-			Sensor_Deal();
-		Sensor_Value();
-		#endif
-		if(CycleSendFlag)																//1ÃëÖÜÆÚ·¢ËÍ»ò½ÓÊÕ
+		if(battery.CHR_Flag)//å¦‚æœæ­£åœ¨å……ç”µ,ä¸å¼€å¯å¿ƒç‡ç›‘æµ‹
 		{
+			chr_indicate();
+		}
+		else
+		{
+			if(1 == pah8011State.hasCharge)
+			{
+				pah8011State.hasCharge = 0;
+				CloseHeartSample();
+			}
+			if(SampleOverFlag && CycleSendEn)//æ´»åŠ¨æ¨¡å¼ä¸‹æ£€æµ‹å¿ƒç‡
+				Sensor_Deal();		
+			Sensor_Value();
+		}
+		#endif
+		if(CycleSendFlag)																//1ç§’å‘¨æœŸå‘é€æˆ–æ¥æ”¶
+		{
+			Bat_Detect();//å……ç”µæ£€æµ‹
 			Radio_Int_On();
 			Radio_Deal();
 			Radio_Int_Off();

@@ -8,21 +8,24 @@
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
 #define PACKET1_STATIC_LENGTH            (32UL)  //!< static length in bytes
 #define PACKET1_PAYLOAD_SIZE             (32UL)  //!< payload size in bytes
-uint8_t Off_sec_Delay = 0;												//Íó´øÕª³ýÑÓÊ±
+uint8_t Off_sec_Delay = 0;												//è…•å¸¦æ‘˜é™¤å»¶æ—¶
 uint8_t Off_sec_Over = 0;
 uint8_t Off_Flag = 1;
 
 extern uint8_t radio_rcvok;
-const uint8_t Version[20] = "TFN108SCF11V07";
+const uint8_t Version[20] = "TFN108SCF11V08";
+
+
+chr_typedef battery;
 /*******************************************************
-º¯ÊýÃû£ºRTC³õÊ¼»¯
-²Î  Êý:ÎÞ
-·µ  »Ø:ÎÞ
+å‡½æ•°åï¼šRTCåˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›ž:æ— 
 *******************************************************/
 void rtc_Init(void)
 {
-	NRF_RTC0->PRESCALER = 4095;//125msCount¼ÆÊý
-//	NRF_RTC0->CC[0] = 9;//1sÖÐ¶Ï,ÐÞÕýºóÔ¼9¸ö¼ÆÊýÖÜÆÚ
+	NRF_RTC0->PRESCALER = 4095;//125msCountè®¡æ•°
+//	NRF_RTC0->CC[0] = 9;//1sä¸­æ–­,ä¿®æ­£åŽçº¦9ä¸ªè®¡æ•°å‘¨æœŸ
 	NRF_RTC0->EVENTS_TICK = 0;//EVENTS_TICK
 	NRF_RTC0->INTENSET =  RTC_INTENSET_TICK_Enabled<< RTC_INTENSET_TICK_Pos;//RTC_INTENSET_TICK_Enabled
 	NRF_RTC0->TASKS_START = 1;
@@ -33,33 +36,110 @@ void rtc_Init(void)
 }
 
 /*******************************************************
-º¯ÊýÃû:µÍÆµ¾§Õñ³õÊ¼»¯
-²Î  Êý:ÎÞ
-·µ  »Ø:ÎÞ
+å‡½æ•°å:ä½Žé¢‘æ™¶æŒ¯åˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›ž:æ— 
 *******************************************************/
 void Osc_LFCLK(void)
 {
 	NRF_CLOCK->EVENTS_LFCLKSTARTED = 0;
-	//Ñ¡ÔñÍâ²¿¾§Õñ
+	//é€‰æ‹©å¤–éƒ¨æ™¶æŒ¯
 	NRF_CLOCK->LFCLKSRC = CLOCK_LFCLKSRC_SRC_RC << CLOCK_LFCLKSRC_SRC_Pos;
   NRF_CLOCK->TASKS_LFCLKSTART = 1;
 	while (NRF_CLOCK->EVENTS_LFCLKSTARTED == 0) 
   {
   }
 }
+
+/************************************************* 
+@Description:å……ç”µå¼•è„šä¸­æ–­åˆå§‹åŒ–
+@Input:æ— 
+@Output:
+@Return:æ— 
+*************************************************/ 
+void chr_interrupt_config(void)
+{
+//	//å……ç”µæŒ‡ç¤ºIOå£è®¾ç½®
+	NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num]=GPIO_PIN_CNF_SENSE_Low<<GPIO_PIN_CNF_SENSE_Pos			//low level
+										| (GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
+                                        | (GPIO_PIN_CNF_PULL_Disabled << GPIO_PIN_CNF_PULL_Pos)
+                                        | (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos)
+                                        | (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos);	
+
+
+	NRF_GPIOTE->EVENTS_PORT=0UL;
+	NRF_GPIOTE->INTENSET =GPIOTE_INTENSET_PORT_Enabled << GPIOTE_INTENSET_PORT_Pos;	//PORT
+	NVIC_SetPriority(GPIOTE_IRQn, PORT_PRIORITY);
+	NVIC_EnableIRQ(GPIOTE_IRQn);
+}
+
+
+
+/************************************************* 
+@Description:ç”µé‡é‡‡é›†
+@Input:æ— 
+@Output:
+@Return:æ— 
+*************************************************/ 
+void Bat_Detect(void)
+{
+	if( 1 == battery.CHR_Flag)//å¦‚æžœæ­£åœ¨å……ç”µ,ä¸å¼€å¯å¿ƒçŽ‡ç›‘æµ‹
+	{
+		if(NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num]!=IO_INPUT)
+		{
+			NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num] = IO_INPUT;
+		}
+		if(0 == Read_CHR)
+		{
+			battery.CHR_Flag  = 1; //æ­£åœ¨å……ç”µ
+		}
+		if(Read_CHR)
+		{
+			battery.CHR_Flag  = 0; //æœªåœ¨å……ç”µ
+		}
+	}
+	else
+	{
+		NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num] = IO_INPUT;
+		if(0 == Read_CHR)
+		{
+			battery.CHR_Flag  = 1; //æ­£åœ¨å……ç”µ
+		}
+		if(Read_CHR)
+		{
+			battery.CHR_Flag  = 0; //æœªåœ¨å……ç”µ
+		}
+		NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num] = GPIO_INVALID;
+	}
+}
+/************************************************* 
+@Description:å……ç”µå¼•è„šä¸­æ–­åˆå§‹åŒ–
+@Input:æ— 
+@Output:
+@Return:æ— 
+*************************************************/ 
+void CHR_IntEvent(void)
+{
+	if(0 == Read_CHR)
+	{
+		//æ­£åœ¨å……ç”µ
+		battery.Port_IT_CHR++;
+		battery.CHR_Flag = 1;//æ­£åœ¨å……ç”µ
+	}	
+}
 /*******************************************************
-º¯ÊýÃû:2.5VµÍµç¼ì²â
-²Î  Êý:ÎÞ
-·µ  »Ø:ÎÞ
+å‡½æ•°å:2.5Vä½Žç”µæ£€æµ‹
+å‚  æ•°:æ— 
+è¿”  å›ž:æ— 
 *******************************************************/
 void power_Init(void)
 {
-	NRF_POWER->POFCON = 5UL;//Enable power failure comparator£¬set threshold to 2.5V
+	NRF_POWER->POFCON = 5UL;//Enable power failure comparatorï¼Œset threshold to 2.5V
 }
 /*******************************************************
-º¯ÊýÃû:RADIO³õÊ¼»¯
-²Î  Êý:ÎÞ
-·µ  »Ø:ÎÞ
+å‡½æ•°å:RADIOåˆå§‹åŒ–
+å‚  æ•°:æ— 
+è¿”  å›ž:æ— 
 *******************************************************/
 void radio_Init(void)
 {
@@ -108,13 +188,13 @@ void radio_Init(void)
 }
 
 /*******************************************************
-º¯ÊýÃû£º¶¨Ê±Æ÷³õÊ¼»¯£¬10ms¼ä¸ô£¬ÖÐ¶Ï
-²Î  Êý:ÎÞ
-·µ  »Ø:ÎÞ
+å‡½æ•°åï¼šå®šæ—¶å™¨åˆå§‹åŒ–ï¼Œ10msé—´éš”ï¼Œä¸­æ–­
+å‚  æ•°:æ— 
+è¿”  å›ž:æ— 
 *******************************************************/
 void timer_Init(void)
 {
-	//´«¸ÐÆ÷Âö³å¼ÆËã£¬16uSÊ±ÖÓ
+	//ä¼ æ„Ÿå™¨è„‰å†²è®¡ç®—ï¼Œ16uSæ—¶é’Ÿ
 	NRF_TIMER1 -> PRESCALER = (8 << TIMER_PRESCALER_PRESCALER_Pos);
 	NRF_TIMER1 -> BITMODE = (TIMER_BITMODE_BITMODE_16Bit << TIMER_BITMODE_BITMODE_Pos);
 	NRF_TIMER1 -> MODE = (TIMER_MODE_MODE_Timer << TIMER_MODE_MODE_Pos);

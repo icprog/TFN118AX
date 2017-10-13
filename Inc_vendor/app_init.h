@@ -5,24 +5,20 @@
 #include "nrf_delay.h"
 #include "string.h"
 
-#ifdef  HARD1
-#define IO_OFF_I 	17
-#define SENSOR_IN	23
-#define	KEY				26     //26
-#define LED				27
-#define SSR_PWREN	28
-#define IO_OFF_D 	5
-#else
-#define IO_OFF_I 	17
-#define SENSOR_IN	23
-#define	KEY				2  //24
-#define LED				25
-#define SSR_PWREN	28
-#define IO_OFF_D 	29
-#endif
 
-#define GPIO_INVALID	0x00000002//Òı½ÅÎŞĞ§£¬¹ØÖÁ×îµÍ¹¦ºÄ
-#define OFF_SEC_DELAY													40	//Åå´÷ºóĞÄÂÊÆô¶¯ÑÓÊ±
+#define IO_OFF_I 	17 //ç¡¬ä»¶æ‹‰ä½
+#define	KEY				25     //26
+#define LED				10
+#define IO_OFF_D 	1   //é»˜è®¤è¾“å‡ºé«˜ç”µå¹³
+//å……ç”µæŒ‡ç¤º
+#define USB_CHR_Pin_Num  6
+#define Read_CHR	((NRF_GPIO->IN >> USB_CHR_Pin_Num)&1)    //0:è¡¨ç¤ºæ­£åœ¨å……ç”µ
+//#define SSR_PWREN	28
+//#define SENSOR_IN	23
+#define IO_INPUT  	0X00000000
+#define GPIO_INVALID	0x00000002//å¼•è„šæ— æ•ˆï¼Œå…³è‡³æœ€ä½åŠŸè€—
+#define OFF_SEC_DELAY													40	//ä½©æˆ´åå¿ƒç‡å¯åŠ¨å»¶æ—¶
+
 
 typedef enum
 {
@@ -37,17 +33,27 @@ typedef enum{
 	LEVEL_RADIO,
 }run_level_t;
 
+typedef struct
+{
+	uint8_t CHR_Flag;//1:è¡¨ç¤ºæ­£åœ¨å……ç”µ   0:è¡¨ç¤ºæœªåœ¨å……ç”µ
+	uint8_t Bat_Full;//1:å·²å……æ»¡
+	uint8_t Port_IT_CHR;//ä¸­æ–­æ¬¡æ•°
+}chr_typedef;
+
 #define RADIO_PRIORITY		APP_IRQ_PRIORITY_MID
-#define RTC_PRIORITY			APP_IRQ_PRIORITY_HIGHEST
+#define RTC_PRIORITY		APP_IRQ_PRIORITY_HIGH
 
 #define TIM_PRIORITY      APP_IRQ_PRIORITY_HIGHEST
-#define PORT_PRIORITY     APP_IRQ_PRIORITY_HIGH
+#define PORT_PRIORITY     APP_IRQ_PRIORITY_HIGHEST
 
-#define DAY_TIME												86400				//Ò»ÌìÃëÊı		
+#define DAY_TIME												86400				//ä¸€å¤©ç§’æ•°		
 
 void rtc_Init(void);
 void radio_Init(void);
 void Osc_LFCLK(void);
 void power_Init(void);
 void timer_Init(void);
+void CHR_IntEvent(void);
+void chr_interrupt_config(void);
+void Bat_Detect(void);
 //FILE END

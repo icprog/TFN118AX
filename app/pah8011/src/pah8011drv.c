@@ -31,6 +31,8 @@
 #include "nrf_nvmc.h"
 #include "app_init.h"
 
+
+
 //#define PAH8011_EXT_DS_DATA_READ_ENABLE() \
 //    do {                                                \
 //		NRF_GPIO->PIN_CNF[PPG_INT_PIN_NUM]=0x000000; /* enable pull up for HANDLINE  AS7000 GPIO5*/  \
@@ -41,7 +43,7 @@
 		NRF_GPIO->PIN_CNF[PPG_INT_PIN_NUM]=0x000002; /*disable input buffer*/   \
     } while ( 0 )
 //		
-//				/*Ê¹ÄÜÖĞ¶Ï*/		
+//				/*ä½¿èƒ½ä¸­æ–­*/		
 //#define PAH8011_EXT_DS_DATA_READ_ENABLE_CN_INTERRUPT() \
 //    do { 																							\
 //				NRF_GPIOTE->EVENTS_IN[0] = 0; /* clear interrupt status */    \
@@ -106,7 +108,7 @@ typedef struct
 
 
 pah8011Data_t pah8011Data;
-
+pah8011_state_t pah8011State = {0,0};
 
 /*============================================================================
 STATIC VARIABLES
@@ -152,6 +154,7 @@ static void pah8011_ae_info_check(void);
 static void Error_Handler(void);
 //void demo_factory_mode(void);
 void demo_ppg_dri(void);
+void demo_factory_mode(void);
 float findMedian(float *data, u8 size);
 void tim_deinit(void);
 //tim
@@ -160,8 +163,9 @@ uint64_t ucstamp;
 uint64_t sample_time;
 uint8_t time_int_flag;
 
+
 /*
-¹¦ÄÜ£ºÊ±¼ä´Á
+åŠŸèƒ½ï¼šæ—¶é—´æˆ³
 */
 uint32_t get_tick_count(void)
 {
@@ -169,7 +173,7 @@ uint32_t get_tick_count(void)
 }
 
 /*
-¹¦ÄÜ£ºÖĞ¶Ï£¬»ñÈ¡µÎ´ğÊ±ÖÓ
+åŠŸèƒ½ï¼šä¸­æ–­ï¼Œè·å–æ»´ç­”æ—¶é’Ÿ
 */
 void onDataReadyEvent(void)
 {
@@ -249,7 +253,7 @@ void onDataReadyEvent(void)
 }
 
 /*
-¹¦ÄÜ£ºµÎ´ğÊ±ÖÓ,51822Ã»ÓĞµÎ´ğÊ±ÖÓ£¬ÓÃ¶¨Ê±Æ÷´úÌæ
+åŠŸèƒ½ï¼šæ»´ç­”æ—¶é’Ÿ,51822æ²¡æœ‰æ»´ç­”æ—¶é’Ÿï¼Œç”¨å®šæ—¶å™¨ä»£æ›¿
 */
 static void onTIMER0Event()
 {
@@ -257,7 +261,7 @@ static void onTIMER0Event()
 	if(ucstamp == sample_time)
 	{
 		tim_deinit();
-		pah8011Data.close_flag = 1;
+		pah8011State.close_flag = 1;
 	}
 //	if(1000 == ucstamp)
 //	{
@@ -267,50 +271,45 @@ static void onTIMER0Event()
 
 }
 /*
-¹¦ÄÜ£ºdata×¼±¸ºÃ£¬ÖĞ¶ÏÒı½ÅÅäÖÃ
+åŠŸèƒ½ï¼šdataå‡†å¤‡å¥½ï¼Œä¸­æ–­å¼•è„šé…ç½®
+2017/9/23ä¿®æ”¹ï¼Œå› ä¸ºè·Ÿå……ç”µæŒ‡ç¤ºå…¬ç”¨ä¸­æ–­ï¼Œæ‰€ä»¥ä¸­æ–­é…ç½®æ”¾åœ¨chr_interrupt_config
 */
 static void pah8011_interrupt_config(void)
 {
-	//ÅäÖÃPAH8011ET int1Òı½Å£¬Data Ready
+	//é…ç½®PAH8011ET int1å¼•è„šï¼ŒData Ready
 //		
 	NRF_GPIO->PIN_CNF[PPG_INT_PIN_NUM]=0x020000;//high level
 	NRF_GPIOTE->EVENTS_PORT=0UL;
 	NRF_GPIOTE->INTENSET=0x80000000;	//PORT
 	NVIC_SetPriority(GPIOTE_IRQn, PORT_PRIORITY);
 	NVIC_EnableIRQ(GPIOTE_IRQn); 
-	
-//	NRF_GPIOTE->CONFIG[0] =  (GPIOTE_CONFIG_POLARITY_LoToHi << GPIOTE_CONFIG_POLARITY_Pos)
-//														 | (PPG_INT_PIN_NUM<< GPIOTE_CONFIG_PSEL_Pos)  
-//														 | (GPIOTE_CONFIG_MODE_Event << GPIOTE_CONFIG_MODE_Pos);
-//	NRF_GPIOTE->EVENTS_IN[0] = 0; 
-//	NRF_GPIOTE->INTENSET  = GPIOTE_INTENSET_IN0_Set << GPIOTE_INTENSET_IN0_Pos;
-//	NVIC_SetPriority(GPIOTE_IRQn, 1);
-//	NVIC_EnableIRQ(GPIOTE_IRQn); 
 
 }
 /*
-¹¦ÄÜ£º²»Ê¹ÄÜÖĞ¶Ï£¬µÍ¹¦ºÄÄ£Ê½
+åŠŸèƒ½ï¼šä½åŠŸè€—æ¨¡å¼
+2017/9/23ä¿®æ”¹ï¼Œå› ä¸ºè·Ÿå……ç”µæŒ‡ç¤ºå…¬ç”¨ä¸­æ–­ï¼Œæ‰€ä»¥ä¸€ç›´ä½¿èƒ½ä¸­æ–­
+å‘ç°å…¬ç”¨ä¸­æ–­ï¼Œå¿ƒç‡ä¸­æ–­å°±è¿›ä¸äº†
 */
 static void pah8011_interrupt_deconfig(void)
 {
 	NRF_GPIOTE->EVENTS_PORT = 0;
-	NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_PORT_Disabled;		
+	NRF_GPIOTE->INTENCLR = 0x80000000;	//PORT	
 	NVIC_DisableIRQ(GPIOTE_IRQn); /* disable change notification interrupts */ 
 	NRF_GPIO->PIN_CNF[PPG_INT_PIN_NUM]=0x000002; /*disable input buffer*/   
 }
 
 /*
-¹¦ÄÜ£ºpah8011³õÊ¼»¯
+åŠŸèƒ½ï¼špah8011åˆå§‹åŒ–
 */
 void pah8011_gpio_init(void)
 {
-	#ifdef __TFN108
+#ifdef __TFN108
 	NRF_GPIO->PIN_CNF[PAH8011_Power_PIN_NUM] = (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
-																				| (GPIO_PIN_CNF_DRIVE_S0D1 << GPIO_PIN_CNF_DRIVE_Pos)
-																				| (GPIO_PIN_CNF_PULL_Disabled << GPIO_PIN_CNF_PULL_Pos)
-																				| (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos)
-																				| (GPIO_PIN_CNF_DIR_Output << GPIO_PIN_CNF_DIR_Pos);
-	PAH8011_Power_Down;//¹Ø±Õ´«¸ĞÆ÷
+												| (GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
+												| (GPIO_PIN_CNF_PULL_Disabled << GPIO_PIN_CNF_PULL_Pos)
+												| (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos)
+												| (GPIO_PIN_CNF_DIR_Output << GPIO_PIN_CNF_DIR_Pos);
+	PAH8011_Power_Down;//å…³é—­ä¼ æ„Ÿå™¨
 	twi_master_deinit();
 	Timer1_Init();
 	#ifdef LOG_ON
@@ -318,18 +317,18 @@ void pah8011_gpio_init(void)
 	#endif
 	debug_printf("====RST \n");
 //	NRF_GPIO->PIN_CNF[IR_INT_PIN_NUM]=0x000002;//high level
-//	PAH8011_EXT_DS_DATA_READ_LowP();//µÍ¹¦ºÄ
+//	PAH8011_EXT_DS_DATA_READ_LowP();//ä½åŠŸè€—
 //	pah8011_interrupt_config();
-	#else
-	nrf_gpio_cfg_output(PAH8011_Power_PIN_NUM);//ÅäÖÃµçÔ´¿Ú
-	PAH8011_Power_Down;//¹Ø±Õ´«¸ĞÆ÷	
+#else
+	nrf_gpio_cfg_output(PAH8011_Power_PIN_NUM);//é…ç½®ç”µæºå£
+	PAH8011_Power_Down;//å…³é—­ä¼ æ„Ÿå™¨	
 //	GPIO_QuickConfigOutput(PAH8011_PD_PIN_NUM);//
-//	PAH8011_Power_Down;//¹Ø±Õ´«¸ĞÆ÷
-	#endif
+//	PAH8011_Power_Down;//å…³é—­ä¼ æ„Ÿå™¨
+#endif
 }
 
 /*
-¹¦ÄÜ£ºpah8011µçÔ´¿ØÖÆ
+åŠŸèƒ½ï¼špah8011ç”µæºæ§åˆ¶
 */
 static void pah8011_gpio_deinit(void)
 {
@@ -338,7 +337,7 @@ static void pah8011_gpio_deinit(void)
 }
 
 /*
-¹¦ÄÜ£º50ms¶¨Ê±³õÊ¼»¯£¬PAH8011Ëã·¨±ØĞëÓÃ
+åŠŸèƒ½ï¼š50mså®šæ—¶åˆå§‹åŒ–ï¼ŒPAH8011ç®—æ³•å¿…é¡»ç”¨
 */
 void tim_start(void)
 {
@@ -349,14 +348,14 @@ void tim_start(void)
 
 
 /*
-¹¦ÄÜ£ºÊÍ·ÅÊ±ÖÓ
+åŠŸèƒ½ï¼šé‡Šæ”¾æ—¶é’Ÿ
 */
 void tim_deinit(void)
 {
 	TIMER_DeInit(NRF_TIMER1);
 }
 /*
-¹¦ÄÜ£º¿ªÆôĞÄÂÊ²É¼¯
+åŠŸèƒ½ï¼šå¼€å¯å¿ƒç‡é‡‡é›†
 */
 uint32_t coo;
 uint8_t pah_start;
@@ -365,16 +364,17 @@ extern void Osc_HFCLK(void);
 void Osc_HFCLK_Off(void);
 void pah8011_power_on(void)
 {
-
+	if(0 == pah8011State.isOpen)
+	{
 		pah8011I2cAddress = pah_get_i2c_slave_addr()<<1;
 		debug_printf("====TEST0 \n");
-		PAH8011_Power_Up;//ÉÏµç
+		PAH8011_Power_Up;//ä¸Šç”µ
 		
-		memset(&pah8011Data,0,sizeof(pah8011Data));//Çå¿ÕÊı¾İ
+		memset(&pah8011Data,0,sizeof(pah8011Data));//æ¸…ç©ºæ•°æ®
 		debug_printf("====TEST1 \n");
 		delay_ms(20);
 		twi_master_init();
-	  pah_start = 1;
+		pah_start = 1;
 	#ifdef LOG_ON
 		need_log_header = true;
 	#endif
@@ -385,17 +385,19 @@ void pah8011_power_on(void)
 		debug_printf("====TEST2 \n");
 //	  pah_deinit();
 //	twi_master_deinit();
-		Osc_HFCLK();//ºÜÖØÒª£¬ÓÃÀ´½µµÍ¹¦ºÄ
+		Osc_HFCLK();//å¾ˆé‡è¦ï¼Œç”¨æ¥é™ä½åŠŸè€—
 		memset(&_state,0,sizeof(_state));
 //		_state.pxialg_data.frame_count = 0;
 		demo_ppg_dri();
 		pah8011_interrupt_config();
 		debug_printf("====TEST3 \n");
 		tim_start();
+		pah8011State.isOpen = 1;
+	}
 	
 }
 /*
-¹¦ÄÜ£º¹Ø±ÕĞÄÂÊ²É¼¯
+åŠŸèƒ½ï¼šå…³é—­å¿ƒç‡é‡‡é›†
 */
 extern uint8_t SensorValue;
 extern uint32_t hr_cnt;
@@ -404,20 +406,24 @@ uint32_t hr_addr = 0x30000;
 uint8_t hr;
 void pah8011_power_off(void)
 {
-		#if 1
+	if(1 == pah8011State.isOpen)
+	{
+	#if 1
 		pah_start = 0;
 		Osc_HFCLK_Off();
-		
-	  if(_state.status == main_status_start_healthcare)
+		pah8011State.isOpen = 0;
+		if(_state.status == main_status_start_healthcare)
 		{
 			stop_healthcare();
-			hr_algorithm_close();
+//			hr_algorithm_close();
+			_state.status = main_status_idle;
 		}
 //		hr_cnt++;
 //		hr = findMedian(pah8011Data.heart,pah8011Data.tid);
 //		tim_deinit();
 		twi_master_deinit();		
 		pah8011_gpio_deinit();
+
 
 //	  if(hr > 0)
 //		{
@@ -437,9 +443,49 @@ void pah8011_power_off(void)
 ////		
 //		delay_ms(1000);
 //		twi_master_deinit();
+	}
 
 }
+/************************************************* 
+@Description:æ‰“å¼€å¿ƒç‡ç¯ï¼Œç”¨æ¥å……ç”µæŒ‡ç¤º
+@Input:æ— 
+@Output:
+@Return:æ— 
+*************************************************/ 
+void chr_indicate(void)
+{
+	static uint8_t on_off;
+	static uint8_t delay;
+	if(_state.status == main_status_start_healthcare)
+	{
+		pah8011_power_off();
+		_state.status = main_status_idle;
+	}
+	if(pah8011State.isOpen == 0)
+	{
+		pah8011State.isOpen = 1;
+		pah8011I2cAddress = pah_get_i2c_slave_addr()<<1;
+		PAH8011_Power_Up;//ä¸Šç”µ
+		delay_ms(20);
+		twi_master_init();
+		pah8011_led_init();
+		on_off = 0;
+		delay = 0;
+		pah8011State.hasCharge = 1;
+//		demo_factory_mode();
+	}
 
+	delay++;
+	if(delay > 20)
+	{
+		delay = 0;
+		on_off = ~on_off;
+		pah_8011_led(on_off);		
+	}
+//	pah_8011_led(1);
+//	pah_8011_led(0);
+	
+}
 /*******************************************************************************
  * NOTE: as most this routine can process 127 data items
  */
@@ -494,32 +540,25 @@ float findMedian(float *data, u8 size)
 }
 
 /*
-¹¦ÄÜ£ºioÖĞ¶Ï£¬¶Ë¿ÚÖĞ¶Ï¸üÊ¡µç
+åŠŸèƒ½ï¼šioä¸­æ–­ï¼Œç«¯å£ä¸­æ–­æ›´çœç”µ
 */
 
 void GPIOTE_IRQHandler(void)
 {
 	// Event causing the interrupt must be cleared.
 	
-	if(NRF_GPIOTE->EVENTS_IN[0])
-	{
-		NRF_GPIOTE->EVENTS_IN[0] = 0; /* clear interrupt status */
-		onDataReadyEvent();
-		coo++;
-	}
-	else if(NRF_GPIOTE->EVENTS_PORT)
+	if(NRF_GPIOTE->EVENTS_PORT)
 	{
 		NRF_GPIOTE->EVENTS_PORT = 0;
-		
+//		CHR_IntEvent();
 		if(1 == Read_PPG)
 		{
 			coo++;
 			onDataReadyEvent();
 //			debug_printf("GPIO_S \n");
-		}	
+		}
+		
 	}
-	
-
 }
 
 void TIMER1_IRQHandler(void)
@@ -533,7 +572,7 @@ void TIMER1_IRQHandler(void)
 	
 }
 /*
-¹¦ÄÜ£º»ñÈ¡ĞÄÂÊÖµ
+åŠŸèƒ½ï¼šè·å–å¿ƒç‡å€¼
 */
 u16 GetHeartValue(void)
 {
@@ -622,8 +661,19 @@ void demo_ppg_dri(void)
 #endif
     _state.status = main_status_start_healthcare;
 }
+
+void demo_led_init(void)
+{
+	 // PAH
+    if (!pah_init())
+    {
+        debug_printf("pah_init() fail. \n");
+        Error_Handler();
+    }
+
+}
 #endif
-#if 0
+#if 1
 
 
 void demo_factory_mode(void)
@@ -860,11 +910,11 @@ static bool hr_algorithm_calculate(pah8series_data_t *pxialg_data, uint32_t ch_n
 //        
 //        debug_log("hr = %d, hr_trust_level = %d, grade = %d \n", (int)hr, hr_trust_level, grade);
 			
-			  pah8series_get_hr(&pah8011Data.hr);
+		pah8series_get_hr(&pah8011Data.hr);
         pah8series_get_hr_trust_level(&pah8011Data.hr_trust_level);
         pah8series_get_signal_grade(&pah8011Data.grade);
         pah8011Data.heart[pah8011Data.tid] = pah8011Data.hr;
-				pah8011Data.tid++;
+		pah8011Data.tid++;
         debug_printf("hr = %d, hr_trust_level = %d, grade = %d \n", (int)pah8011Data.hr, pah8011Data.hr_trust_level, pah8011Data.grade);			
         pah8011Data.has_updated = true;
     }
@@ -956,4 +1006,5 @@ static void Error_Handler(void)
 
 	error_i++;
 //	tim_deinit();
+	
 }

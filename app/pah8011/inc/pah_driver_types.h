@@ -22,7 +22,7 @@ SOME DEFINITION
 ============================================================================*/
 #define PPG_IR_CH_NUM           0
 
-//#define ENABLE_MEMS_ZERO
+#define ENABLE_MEMS_ZERO
 #define MAX_MEMS_SAMPLE_NUM 	100
 #define MEMS_SAMPLE_PER_CH  25
 

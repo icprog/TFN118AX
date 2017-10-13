@@ -315,4 +315,7 @@ uint8_t pah8011_setting_version(void);
  */
 uint8_t pah8011_ae_info_read(uint32_t* Expo_time,uint8_t* LEDDAC);
 
+
+void pah_8011_led(bool on);
+uint8_t pah8011_led_init(void);
 #endif  // header guard

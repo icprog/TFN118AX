@@ -35,7 +35,7 @@ uint8_t test_interval;//单个周期宽度
 uint8_t nb_array[NB_LEN];//邻域取值缓冲
 uint8_t IntervalBuffer[RATE_BUF_LEN];//邻域算法结果取值
 #endif
-extern pah8011Data_t pah8011Data;
+extern pah8011_state_t pah8011State;
 uint8_t SensorValue = 0xff;										//传感值
 
 void CloseHeartSample(void)
@@ -150,7 +150,7 @@ void OFFaboutRate(void)
 	{
 		SampleOnFlag = false;
 		SampleOverFlag = 0;
-		pah8011Data.close_flag = 1;
+		pah8011State.close_flag = 1;
 //		CloseHeartSample();
 	}else{
 		if(Off_sec_Over)																//腕带佩戴后溢出
@@ -173,7 +173,7 @@ void Sensor_timeout(void)
 		SampleOnTime --;
 		if(SampleOnTime == 0)
 		{
-			pah8011Data.close_flag = 1;
+			pah8011State.close_flag = 1;
 //			CloseHeartSample();
 		}
 	}

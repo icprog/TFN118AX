@@ -36,15 +36,15 @@ static uint8_t lis3dhI2cAddress = LIS3DH_I2C_SLAVE_ADDRESS<<1;
 static uint8_t lis3dhSendCommand(uint8_t reg, uint8_t value)
 {
 	
-	  uint8_t txData[2];
+	uint8_t txData[2];
     txData[0] = reg;
     txData[1] = value;
-		return (I2C_SendDates(lis3dhI2cAddress,txData,2) == ERR_NONE);
+	return (I2C_SendDates(lis3dhI2cAddress,txData,2) == ERR_NONE);
 }
 
 static uint8_t lis3dhReadRegisters(uint8_t reg, uint8_t count, uint8_t *data)
 {
-		return (I2C_ReadDatas(lis3dhI2cAddress,reg,data,count)==ERR_NONE);   
+	return (I2C_ReadDatas(lis3dhI2cAddress,reg,data,count)==ERR_NONE);   
 }
 
 /* LIS IC returns accelerometer data with one unit of ~ 0.75mg (we want to
@@ -98,10 +98,10 @@ static uint8_t lis3dhOpenInternal(uint8_t sampleReadMode, uint16_t *sampleFreque
         if (lis3dhSendCommand(LIS3DH_FIFO_CTRL_REG, 0x40) != 1) /* FIFO-mode enabled */
             return 0;
         if (lis3dhSendCommand(LIS3DH_CTRL_REG1, (LIS3DH_DATA_RATE_25_HZ) | 0x7) != 1) /* select bandwith, all 3 axis */
-				{
-						*sampleFrequencyMilliHz = 25000; // 10.000Hz
+		{
+			*sampleFrequencyMilliHz = 25000; // 10.000Hz
             return 0;
-				}
+		}
         
     }
     return 1;

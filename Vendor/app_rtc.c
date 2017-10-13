@@ -22,7 +22,7 @@ extern uint8_t Shake;
 extern uint8_t RateErr;
 extern uint8_t Off_Flag;
 
-extern pah8011Data_t pah8011Data;
+extern pah8011_state_t pah8011State;
 /*
 Íó´øÕª³ý¼ì²â
 */
@@ -127,7 +127,7 @@ void RTC0_IRQHandler(void)
 		OFF_Deal();
 		if(!SampleOnFlag)
 		{
-			pah8011Data.close_flag = 1;
+			pah8011State.close_flag = 1;
 //			CloseHeartSample();
 		}
 		#endif

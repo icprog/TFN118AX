@@ -39,6 +39,7 @@
 
 // platform support
 #include "pah_platform_functions.h"
+#include "pah_verify_8011_reg.h"
 
 //#define _INT_PULL_LOW_I2C	
 //#define _INT_PULL_LOW_SPI		
@@ -1641,4 +1642,169 @@ FAIL:
     return ret;
 }
 
+void pah_8011_led(bool on)
+{
+	if(true == on)
+	{
+		pah_comm_write(0x7F, 0x01);
+		pah_comm_write(0x5f, 0x01);
+	}
+	else
+	{
+		pah_comm_write(0x7F, 0x01);
+		pah_comm_write(0x5f, 0x00);
+	}
+}
 
+uint8_t pah8011_led_init(void)
+{
+	uint8_t LEDDAC[3];
+	pah_ret ret = pah_err_unknown;
+//	ret = pah_8011_startup();
+//    if (PAH_FAILED(ret))
+//        goto FAIL;
+	if (!pah_comm_write(0x7F, 0x04))    //bank4
+		return 0;
+	if (!pah_comm_write(0x69, 0x01))   //power down
+		return 0;
+	delay_ms(2);
+	if (!pah_comm_write(0x69, 0x00))   //wake up
+		return 0;
+	delay_ms(2);
+	
+	if (!pah_comm_write(0x7F, 0x05))   
+		return 0;	
+	if (!pah_comm_write(0x44, 0x12))   
+		return 0;	
+	if (!pah_comm_write(0x7F, 0x00))   
+		return 0;	
+	if (!pah_comm_write(0x10, 0x03))   
+		return 0;	
+	if (!pah_comm_write(0x7F, 0x01))   
+		return 0;	
+	if (!pah_comm_write(0x71, 0x00))   
+		return 0;	
+	if (!pah_comm_write(0x75, 0x02))   
+		return 0;	
+	if (!pah_comm_write(0x5d, 0x00))   
+		return 0;	
+	if (!pah_comm_write(0x5e, 0x00))   
+		return 0;
+	if (!pah_comm_write(0x5f, 0x01))   
+		return 0;	
+	if (!pah_comm_write(0x60, 0x01))   
+		return 0;	
+	if (!pah_comm_write(0x7F, 0x04))   
+		return 0;	
+	if (!pah_comm_write(0x12, 0x06))   
+		return 0;	
+	if (!pah_comm_write(0x13, 0x0a))   
+		return 0;	
+	if (!pah_comm_write(0x15, 0x69))   
+		return 0;	
+	if (!pah_comm_write(0x7F, 0x01))   
+		return 0;	
+	if (!pah_comm_write(0x24, 0x01))   
+		return 0;		
+//	if (!pah_comm_write(0x5f, 0x00))   
+//		goto FAIL;		
+//	if (!pah_comm_write(0x64, 0x01))    //global_reset_n
+//		goto FAIL;	
+//    _pah8011_init();	
+
+//	if (!pah_comm_write(0x7F, 0x00))    //bank0
+//		goto FAIL;	
+//    if (!pah_comm_read(0x2A, &LEDDAC[0]))//read led current for ChA
+//        goto FAIL;
+//	if (!pah_comm_read(0x49, &LEDDAC[1]))//read led current for ChA
+//		goto FAIL;
+//	if (!pah_comm_read(0x68, &LEDDAC[2]))//read led current for ChA
+//		goto FAIL;	
+//	
+//	if (!pah_comm_write(0x7F, 0x01))    //bank1
+//		goto FAIL;		
+//	if (!pah_comm_write(0x21, 0x49))    //enable chA
+//		goto FAIL;	
+//	if (!pah_comm_write(0x23, 0x49))    //enable chB
+//		goto FAIL;	
+//	if (!pah_comm_write(0x25, 0x49))    //enable chC
+//		goto FAIL;	
+//	
+//	if (!pah_comm_write(0x38, 0x00))    //disable auto frame period control for ChA
+//		goto FAIL;	
+//	if (!pah_comm_write(0x40, 0x00))    //disable auto frame period control for ChA
+//		goto FAIL;	
+//	if (!pah_comm_write(0x48, 0x00))    //disable auto frame period control for ChA
+//		goto FAIL;		
+//	
+//    if (!pah_comm_write(0x7F, 0x00))    //bank0
+//        goto FAIL;
+//    if (!pah_comm_write(0x13, 0x02))    //disable Auto Exposure for ChA
+//        goto FAIL;
+//    if (!pah_comm_write(0x14, 0x1A))    //enable led dac for ChA
+//        goto FAIL;	
+//	
+//	if (!pah_comm_write(0x32, 0x02))    //disable Auto Exposure for ChB
+//		goto FAIL;
+//    if (!pah_comm_write(0x33, 0x1A))    //enable led dac for ChB
+//        goto FAIL;
+//		
+//	if (!pah_comm_write(0x51, 0x02))    //disable Auto Exposure for ChC
+//		goto FAIL;	
+//    if (!pah_comm_write(0x52, 0x1A))    //enable led dac for ChC
+//        goto FAIL;		
+//	
+//	if (!pah_comm_write(0x16, 0xA0))    
+//		goto FAIL;	
+//	if (!pah_comm_write(0x17, 0x10))    //set of fixed exposure time for ChA
+//		goto FAIL;	
+//	if (!pah_comm_write(0x35, 0xA0))    
+//		goto FAIL;	
+//	if (!pah_comm_write(0x36, 0x00))    //set of fixed exposure time for ChB
+//		goto FAIL;	
+//	if (!pah_comm_write(0x54, 0xA0))    
+//		goto FAIL;	
+//	if (!pah_comm_write(0x55, 0x01))    //set of fixed exposure time for ChC
+//		goto FAIL;		
+//	
+//	if (!pah_comm_write(0x2A, 0x06))    //set led current for ChA
+//		goto FAIL;		
+//	if (!pah_comm_write(0x49, 0x10))    //set led current for Chb
+//		goto FAIL;		
+//	if (!pah_comm_write(0x68, 0x0B))    //set led current for ChC
+//		goto FAIL;			
+
+//	if (!pah_comm_write(0x7F, 0x00))    //bank0
+//		goto FAIL;		
+//	
+//	if (!pah_comm_write(0x70, 0x01))    //select and turn on led0
+//		goto FAIL;		
+//	if (!pah_comm_write(0x71, 0x02))    //select and turn on led1
+//		goto FAIL;				
+//	if (!pah_comm_write(0x72, 0x04))    //select and turn on led2
+//		goto FAIL;		
+
+//    ret = pah_8011_update_flag();
+//    if (PAH_FAILED(ret))
+//        goto FAIL;	
+//	
+//	if (!pah_comm_write(0x7F, 0x00))    //bank0
+//		goto FAIL;	
+//    if (!pah_comm_read(0x2A, &LEDDAC[0]))
+//        goto FAIL;
+//	if (!pah_comm_read(0x49, &LEDDAC[1]))
+//		goto FAIL;
+//	if (!pah_comm_read(0x68, &LEDDAC[2]))
+//		goto FAIL;	
+
+//	if (!pah_comm_write(0x30, 0x01))    //clk
+//		goto FAIL;
+//    // wait for clk
+//    delay_ms(1);
+
+	
+
+//	FAIL:
+//    debug_printf_1("pah8011_ae_info_read(). fail, ret = %d \n", ret);
+    return ret;
+}
