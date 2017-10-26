@@ -264,18 +264,19 @@ void radio_TriggerTx(void)
 			winflag - 是否携带窗口
 输出：无
 ****************************************/
-extern uint8_t pah_start;
+
+#ifdef heart_test
 extern int16_t                mems_data[100 * 3];
-//extern uint32_t hr_cnt;
-//uint8_t hr_buf[2];
-//uint32_t hr_addr = 0x30000;
+extern uint32_t hr_cnt;
+uint8_t hr_buf[2];
+uint32_t hr_addr = 0x30000;
 
 void Radio_Period_Send(uint8_t cmdflag,uint8_t winflag)
 {
 //	uint8_t idx,page,tempLowVol = 0;
 //	static uint8_t key_sendnum,err_sendnum,shake_sendnum;
 	ClearRadioBuffer();
-	if(pah_start)
+	if(pah8011State.isOpen)
 	{
 		package[1]=0;
 		package[2]=0x81;
@@ -314,6 +315,109 @@ void Radio_Period_Send(uint8_t cmdflag,uint8_t winflag)
 		radio_Disable();
 	}
 }
+#else
+/****************************************
+函数：周期发送射频信息
+输入：cmdflag - 是否携带指令
+			winflag - 是否携带窗口
+输出：无
+****************************************/
+void Radio_Period_Send(uint8_t cmdflag,uint8_t winflag)
+{
+	uint8_t idx,page,tempLowVol = 0;
+	static uint8_t key_sendnum,err_sendnum,shake_sendnum;
+	
+	ClearRadioBuffer();
+	
+	package[TAG_SER_IDX] = (para_Record[TAGP_BRIEFNUM_IDX] << TAG_SER_Pos) 
+												| (cmdflag == NORMAL_INFO ? TAG_TYPE_NORMAL_INFO:TAG_TYPE_WITH_CMD);//短号
+	
+	memcpy(package + TAG_ID_IDX,DeviceID,4);//标签ID
+	
+	package[TAG_WINDOWS_IDX] |= (winflag == NO_WINDOW?TAG_WINDOWS_NOWIN:TAG_WINDOWS_WITHWIN);//携带窗口
+	package[TAG_JOINTYPE_IDX] |= (para_Record[TAGP_BRIEFNUM_IDX] < 16 ? TAG_JOINTYPE_STATIC:TAG_JOINTYPE_DYNAMIC);//动静态接入
+	package[TAG_ERROR_IDX] |= (RateErr > 0?TAG_ERROR_WARN:TAG_ERROR_NORMAL);//传感数据异常
+	package[TAG_KEY_IDX] |= (Key > 0?TAG_KEY_WARN:TAG_KEY_NORMAL);
+	package[TAG_SHOCK_IDX] |= (Shake > 0?TAG_SHOCK_WARN:TAG_SHOCK_NORMAL);
+	if(para_Record[TAGP_WORKMODE_IDX] & TAGP_WORKMODE_Msk)
+		package[TAG_LOWPWR_IDX] |= TAG_LOWPWR_ON;
+	else
+		package[TAG_LOWPWR_IDX] &= ~TAG_LOWPWR_ON;
+	
+	if(Key){
+		key_sendnum ++;
+		if(key_sendnum > 10){
+			Key = 0;
+			key_sendnum = 0;
+		}
+	}else
+		key_sendnum = 0;
+	
+	if(RateErr){
+		err_sendnum ++;
+		if(err_sendnum > 10){
+			RateErr = 0;
+			err_sendnum = 0;
+		}
+	}else
+		err_sendnum =0;
+	
+	if(Shake){
+		shake_sendnum ++;
+		if(shake_sendnum > 10){
+			Shake = 0;
+			shake_sendnum = 0;
+		}
+	}else
+		shake_sendnum = 0;
+	
+	if(LowVolReportNum < 10){//低压报警，一天内只上报10次
+		if(LowVol){
+			tempLowVol = 1;
+		}else{
+			tempLowVol = 0;
+		}
+		LowVolReportNum ++;
+	}else
+		tempLowVol = 0;
+	
+	package[TAG_LOWVOLTAGE_IDX] |= (tempLowVol >0?TAG_LOWVOLTAGE_WARN:TAG_LOWVOLTAGE_NORMAL);
+	
+	package[TAG_LOCATION_IDX] = 0xff;//激励器无效
+	package[TAG_SENSORTYPE_IDX] |= TAG_SENSORTYPE_heart;//传感类型
+	package[TAG_VALUE_IDX] = SensorValue;//传感数值
+	package[TAG_UNIT_IDX] = para_Record[TAGP_SSRUNIT_IDX];//传感采样单位和传感采样周期
+	package[TAG_RXINDIC_IDX] |= (DownCmdFlag > 0?TAG_RXINDIC_VALID:TAG_RXINDIC_INVALID);
+	package[TAG_RXRPD_IDX] |= (DownRPDFlag > 0?TAG_RXRPD_VALID:TAG_RXRPD_INVALID);
+	
+	if(cmdflag)
+	{
+		package[TAG_EXTINFO_IDX] |= (buf_ExtInfo[0] & 0x0f);
+		memcpy(package + TAG_EXTINFO_IDX + 1,buf_ExtInfo + 1,EXTINFO_LEN-1);
+	}
+	else
+	{
+		package[TAG_EXTINFO_IDX] |= 0x00 & 0x0F;//读指令
+		page = ((para_Record[TAGP_RPINFOSRC_IDX] & TAGP_RPINFOSRC_Msk) >> TAGP_RPINFOSRC_Pos)+1;
+		idx = Get_ValidPara(page,buf_ExtInfo + 4,0);
+		
+		package[EXTINFO_FLSPG_IDX] |= ((page << EXTINFO_FLSPG_Pos) & EXTINFO_FLSPG_Msk);
+		package[EXTINFO_RDVLD_IDX] |= (1 << EXTINFO_RDVLD_Pos);
+		package[EXTINFO_RDOS_IDX] |= ((idx << EXTINFO_RDOS_Pos) & EXTINFO_RDOS_Msk );
+		
+		memcpy(package + EXTINFO_DATA_IDX,buf_ExtInfo+4,RECORD_LEN);
+	}
+	package[0] = utl_GetSum(package+1,RADIO_BUFFER_SIZE-1);
+	//活动模式
+	if(cmdflag)
+		radio_select(CHANNEL_CONFIG,RADIO_TX);
+	else
+		radio_select(CHANNEL_DATA,RADIO_TX);
+	radio_TriggerTx();
+	//关闭发送模式
+	radio_Disable();
+}
+#endif
 /****************************************
 函数：射频解析
 输入：无
@@ -328,24 +432,27 @@ void Radio_Period_Send(uint8_t cmdflag,uint8_t winflag)
 #define FLAG_DOWN											2
 void Radio_Deal(void)
 {
-//	static uint8_t wincount;
+	static uint8_t wincount;
 	static uint8_t cmd,page,idx;
 	
 	//标签接收/响应的数据
 	CycleSendFlag = 0;
-//	wincount ++;
-//	if(wincount >= 10)
-//	{
-//		Radio_Period_Send(0,1);													//发送带接收窗口
-//		wincount = 0;
-//		radio_select(CHANNEL_CONFIG,RADIO_RX);
-//		Delay_us(500);
-//		radio_Disable();
-//	}else{
-//		if(CycleSendEn)//活动模式
-//			Radio_Period_Send(0,0);													//常规发送
-//	}
+	#ifdef heart_test
 	Radio_Period_Send(0,0);													//常规发送
+	#else
+	wincount ++;
+	if(wincount >= 10)
+	{
+		Radio_Period_Send(0,1);													//发送带接收窗口
+		wincount = 0;
+		radio_select(CHANNEL_CONFIG,RADIO_RX);
+		Delay_us(500);
+		radio_Disable();
+	}else{
+		if(CycleSendEn)//活动模式
+			Radio_Period_Send(0,0);													//常规发送
+	}
+	#endif
 	if(radio_rcvok)
 	{	
 		//校验和校验

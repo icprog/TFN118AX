@@ -113,7 +113,7 @@ pah8011_state_t pah8011State = {0,0};
 /*============================================================================
 STATIC VARIABLES
 ============================================================================*/
-static main_state_s _state;
+main_state_s _state;
 
 static bool need_log_header = true;
 
@@ -260,7 +260,7 @@ static void onTIMER0Event()
 	ucstamp++;
 	if(ucstamp == sample_time)
 	{
-		tim_deinit();
+//		tim_deinit();
 		pah8011State.close_flag = 1;
 	}
 //	if(1000 == ucstamp)
@@ -346,7 +346,10 @@ void tim_start(void)
 	TIMER_Start(NRF_TIMER1);
 }
 
-
+void tim_stop(void)
+{
+	TIMER_Stop(NRF_TIMER1);
+}
 /*
 功能：释放时钟
 */
@@ -358,41 +361,51 @@ void tim_deinit(void)
 功能：开启心率采集
 */
 uint32_t coo;
-uint8_t pah_start;
-uint32_t hr_cnt;
+
+
+//uint32_t hr_cnt;
 extern void Osc_HFCLK(void);
 void Osc_HFCLK_Off(void);
 void pah8011_power_on(void)
 {
+	static uint8_t first_test;//第一次测试时间久点
 	if(0 == pah8011State.isOpen)
 	{
 		pah8011I2cAddress = pah_get_i2c_slave_addr()<<1;
-		debug_printf("====TEST0 \n");
+//		debug_printf("====TEST0 \n");
 		PAH8011_Power_Up;//上电
 		
 		memset(&pah8011Data,0,sizeof(pah8011Data));//清空数据
-		debug_printf("====TEST1 \n");
+//		debug_printf("====TEST1 \n");
 		delay_ms(20);
 		twi_master_init();
-		pah_start = 1;
+
+
 	#ifdef LOG_ON
 		need_log_header = true;
 	#endif
+		if(0 == first_test)
+		{
+			first_test = 1;
+			sample_time = 20000;//20s
+		}
+		else
+		{
+			sample_time = SAMPLE_ON_TIME*1000;
+		}
 		ucstamp = 0;
-		sample_time = SAMPLE_ON_TIME*1000;
-//	accelerometer_init();
+		
+
 		coo = 0;
-		debug_printf("====TEST2 \n");
-//	  pah_deinit();
-//	twi_master_deinit();
+//		debug_printf("====TEST2 \n");
 		Osc_HFCLK();//很重要，用来降低功耗
-		memset(&_state,0,sizeof(_state));
-//		_state.pxialg_data.frame_count = 0;
+		_state.pxialg_data.frame_count = 0;
 		demo_ppg_dri();
 		pah8011_interrupt_config();
-		debug_printf("====TEST3 \n");
+//		debug_printf("====TEST3 \n");
 		tim_start();
 		pah8011State.isOpen = 1;
+		pah8011State.pah_heart_func  = 1;
 	}
 	
 }
@@ -400,31 +413,36 @@ void pah8011_power_on(void)
 功能：关闭心率采集
 */
 extern uint8_t SensorValue;
-extern uint32_t hr_cnt;
-uint8_t hr_buf[2];
-uint32_t hr_addr = 0x30000;
-uint8_t hr;
+//extern uint32_t hr_cnt;
+//uint8_t hr_buf[2];
+//uint32_t hr_addr = 0x30000;
+//uint8_t hr;
 void pah8011_power_off(void)
 {
 	if(1 == pah8011State.isOpen)
 	{
 	#if 1
-		pah_start = 0;
-		Osc_HFCLK_Off();
+		
 		pah8011State.isOpen = 0;
+		pah8011State.pah_heart_func = 0;
+		tim_deinit();
+		Osc_HFCLK_Off();
 		if(_state.status == main_status_start_healthcare)
 		{
-			stop_healthcare();
+			stop_healthcare();//停止加速度采集等
 //			hr_algorithm_close();
 			_state.status = main_status_idle;
 		}
-//		hr_cnt++;
-//		hr = findMedian(pah8011Data.heart,pah8011Data.tid);
-//		tim_deinit();
 		twi_master_deinit();		
 		pah8011_gpio_deinit();
+		//更新心率值
+		GetHeartValue();
+//		hr_cnt++;
+//		hr = findMedian(pah8011Data.heart,pah8011Data.tid);
 
+		
 
+//心率值存入Flash
 //	  if(hr > 0)
 //		{
 //			SensorValue = hr;
@@ -434,15 +452,7 @@ void pah8011_power_off(void)
 //			hr_addr = hr_addr +2;
 //		}
 //		
-
-//	  accelerometer_stop();
-//		hr_algorithm_close();
-		#endif
-//		tim_deinit();
-//		pah8011_gpio_deinit();
-////		
-//		delay_ms(1000);
-//		twi_master_deinit();
+	#endif
 	}
 
 }
@@ -459,6 +469,7 @@ void chr_indicate(void)
 	if(_state.status == main_status_start_healthcare)
 	{
 		pah8011_power_off();
+		delay_ms(1000);
 		_state.status = main_status_idle;
 	}
 	if(pah8011State.isOpen == 0)
@@ -576,14 +587,14 @@ void TIMER1_IRQHandler(void)
 */
 u16 GetHeartValue(void)
 {
-	if(pah8011Data.has_updated)
+	uint16_t hr;
+	hr = findMedian(pah8011Data.heart,pah8011Data.tid);
+	if(hr > 0)
 	{
-//		pah8011Data.has_updated = 0;
-//		pah8011_power_off();
-		return pah8011Data.hr;
+		SensorValue = hr;
 	}
-	else
-		return 0;
+	debug_printf("new hr=%d \n",SensorValue);
+	return SensorValue;
 }
 
 #if 0

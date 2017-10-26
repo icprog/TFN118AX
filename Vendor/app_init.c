@@ -101,6 +101,7 @@ void Bat_Detect(void)
 	else
 	{
 		NRF_GPIO->PIN_CNF[USB_CHR_Pin_Num] = IO_INPUT;
+		__nop();__nop();__nop();__nop();__nop();
 		if(0 == Read_CHR)
 		{
 			battery.CHR_Flag  = 1; //正在充电

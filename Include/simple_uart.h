@@ -19,10 +19,10 @@
 #include <stdint.h>
 
 
-#define RX_PIN_NUMBER  0    // UART RX pin number.
-#define TX_PIN_NUMBER 5   // UART TX pin number.
-#define CTS_PIN_NUMBER 1   // UART Clear To Send pin number. Not used if HWFC is set to false
-#define RTS_PIN_NUMBER 2    // Not used if HWFC is set to false 
+#define RX_PIN_NUMBER  14    // UART RX pin number.
+#define TX_PIN_NUMBER 11   // UART TX pin number. 51822开发板测试时只需把引脚改成9
+#define CTS_PIN_NUMBER 15   // UART Clear To Send pin number. Not used if HWFC is set to false
+#define RTS_PIN_NUMBER 8    // Not used if HWFC is set to false 
 #define HWFC           false // UART hardware flow control
 /** @file
 * @brief Simple UART driver

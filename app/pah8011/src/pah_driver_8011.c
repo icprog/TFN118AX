@@ -1658,13 +1658,15 @@ void pah_8011_led(bool on)
 
 uint8_t pah8011_led_init(void)
 {
-	uint8_t LEDDAC[3];
+//	uint8_t LEDDAC[3];
 	pah_ret ret = pah_err_unknown;
 //	ret = pah_8011_startup();
 //    if (PAH_FAILED(ret))
 //        goto FAIL;
 	if (!pah_comm_write(0x7F, 0x04))    //bank4
 		return 0;
+	if (!pah_comm_write(0x64, 0x01))    //global_reset_n
+		return 0;	
 	if (!pah_comm_write(0x69, 0x01))   //power down
 		return 0;
 	delay_ms(2);

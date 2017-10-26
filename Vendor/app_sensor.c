@@ -129,14 +129,14 @@ void Sensor_Deal(void)
 	SampleOnTime = SAMPLE_ON_TIME;
 	pah8011_power_on();
 }
-
+/*******************************************************
+函数名：获取心率值
+参  数:无
+返  回:无
+*******************************************************/
 void Sensor_Value(void)
 {
-	uint8_t hrm = GetHeartValue();
-	if(hrm)
-	{
-		SensorValue = hrm;
-	}
+	SensorValue = GetHeartValue();
 }
 
 /*******************************************************

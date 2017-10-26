@@ -76,11 +76,12 @@ void Osc_HFCLK(void)
 	}
 }
 
-extern uint8_t pah_start;
+
+
 void Osc_HFCLK_Off(void)
 {
 	//当心率采集时不关闭外部时钟，使用外部晶振，功耗更低。
-	if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_SRC_Xtal)==1 && 0 == pah_start )
+	if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_SRC_Xtal)==1 && 0 == pah8011State.pah_heart_func  )
 	{
 		NRF_CLOCK->TASKS_HFCLKSTOP = 1;
 	}
@@ -144,6 +145,7 @@ void FeedWDT(void)
  * @brief Function for application main entry. 
  * @return 0. int return type required by ANSI/ISO standard.
  */
+
 int main(void)
 {
 	Osc_LFCLK();
@@ -153,7 +155,9 @@ int main(void)
 //	timer_Init();
 	GetDeviceID();
 	Get_ValidPara(TYPE_PARA,para_Record,true);
-//	EnableWDT();
+	#ifdef WATCHDOG
+	EnableWDT();
+	#endif
 	nrf_gpio_cfg_output(IO_OFF_D);
 	nrf_gpio_pin_set(IO_OFF_D);
 	chr_interrupt_config();//充电中断初始化
@@ -169,11 +173,11 @@ int main(void)
 		}
 		PowerCheck();
 		#ifdef __TFN108
-//		OFFaboutRate();
+		OFFaboutRate();
 		if(1 == pah8011State.close_flag)
 		{
 			pah8011State.close_flag = 0;
-			CloseHeartSample();
+			CloseHeartSample();//获得新心率数据
 		}
 		if(battery.CHR_Flag)//如果正在充电,不开启心率监测
 		{
@@ -188,7 +192,7 @@ int main(void)
 			}
 			if(SampleOverFlag && CycleSendEn)//活动模式下检测心率
 				Sensor_Deal();		
-			Sensor_Value();
+//			Sensor_Value();
 		}
 		#endif
 		if(CycleSendFlag)																//1秒周期发送或接收
@@ -203,8 +207,10 @@ int main(void)
 			led_flag = 0;
 			NRF_GPIO->PIN_CNF[LED] = 0x00000002;
 		}
+		#ifdef WATCHDOG
+		FeedWDT();
+		#endif		
 		__WFI();
-//		FeedWDT();
   }
 }
 

@@ -22,7 +22,6 @@ typedef struct
 	uint8_t return_value;
 	uint8_t tid;
 	float heart[100];
-	
 }pah8011Data_t;
 
 typedef struct
@@ -30,6 +29,7 @@ typedef struct
 	uint8_t close_flag;
 	uint8_t isOpen;
 	uint8_t hasCharge;
+	uint8_t pah_heart_func;
 }pah8011_state_t;
 void chr_indicate(void);
 void demo_led_init(void);

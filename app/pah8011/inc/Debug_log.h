@@ -5,12 +5,16 @@
 
 // c
 #include <stdbool.h>
+//打印信息
+//#define LOG_ON
 
 #ifdef LOG_ON
-#define ENABLE_UART_LOG
 
-#define ENABLE_LOG_PRINT
-//#define ENABLE_DEBUG_PRINT
+#define ENABLE_UART_LOG
+//打印数据
+//#define ENABLE_LOG_PRINT
+
+#define ENABLE_DEBUG_PRINT//打印调试信息
 #endif
 
 

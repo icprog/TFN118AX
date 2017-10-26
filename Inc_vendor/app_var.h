@@ -24,7 +24,7 @@
 #define RADIO_RX												0
 #define RADIO_TX												1
 //ƒ¨»œ…‰∆µ∆µµ¿
-#define DEFAULT_CHANNEL_DATA						23
+#define DEFAULT_CHANNEL_DATA						2
 #define DEFAULT_CHANNEL_CONFIG					7
 
 /*******************************************
